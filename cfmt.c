@@ -49,7 +49,7 @@ static const char *type_id_to_fmt(int type_id) {
     default: return NULL;
   }
 }
-static _Thread_local struct string_buffer fmt_buf, out_buf;
+static struct string_buffer fmt_buf, out_buf;
 const char *cfmt(const char *fmt, int count, int types[], va_list list) {
   char stat = 'c';
   const char *fmt_spec_start = NULL;
