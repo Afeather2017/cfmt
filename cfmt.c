@@ -116,16 +116,16 @@ const char *cfmt(const char *fmt, int count, int types[], va_list list) {
 void _cfmt_println(const char *fmt, int count, int types[], ...) {
   va_list list;
   va_start(list, types);
-  puts(cfmt(fmt, count, types, list));
+  puts(cfmt(fmt, count, types + 1, list));
 }
 const char *_cfmt_format(const char *fmt, int count, int types[], ...) {
   va_list list;
   va_start(list, types);
-  return cfmt(fmt, count, types, list);
+  return cfmt(fmt, count, types + 1, list);
 }
 void _cfmt_fprint(FILE *fp, const char *fmt, int count, int types[], ...) {
   va_list list;
   va_start(list, types);
-  const char *output = cfmt(fmt, count, types, list);
+  const char *output = cfmt(fmt, count, types + 1, list);
   fputs(output, fp);
 }
