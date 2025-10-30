@@ -1,4 +1,5 @@
 #include "cfmt.h"
+
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,8 +13,7 @@ static void string_buffer_init(struct string_buffer *buf) {
   buf->size = 0;
 }
 static void put_to_buf(struct string_buffer *buf, char ch) {
-  if (buf->size >= buf->capacity)
-    abort();
+  if (buf->size >= buf->capacity) abort();
   buf->data[buf->size++] = ch;
 }
 static void concat_to_buf(struct string_buffer *buf, const char *str) {
@@ -25,45 +25,32 @@ static char *get_buf_as_c_string(struct string_buffer *buf) {
   return buf->data;
 }
 static const char *type_id_to_fmt(int type_id) {
+  // clang-format off
   switch (type_id) {
-  case 0u:
-    return "%c";
-  case 1u:
-    return "%c";
-  case 2u:
-    return "%hu";
-  case 3u:
-    return "%hu";
-  case 4u:
-    return "%d";
-  case 5u:
-    return "%u";
-  case 6u:
-    return "%ld";
-  case 7u:
-    return "%lu";
-  case 8u:
-    return "%lld";
-  case 9u:
-    return "%llu";
-  case 10:
-    return "%f";
-  case 11:
-    return "%lf";
+    case 0u: return "%c";
+    case 1u: return "%c";
+    case 2u: return "%hu";
+    case 3u: return "%hu";
+    case 4u: return "%d";
+    case 5u: return "%u";
+    case 6u: return "%ld";
+    case 7u: return "%lu";
+    case 8u: return "%lld";
+    case 9u: return "%llu";
+    case 10: return "%f";
+    case 11: return "%lf";
 
-  case 50:
-  case 51:
-    return "%s";
-  case 52:
-  case 53:
-  case 54:
-  case 55:
-  case 56:
-  case 57:
-    return "%#p";
-  default:
-    return NULL;
+    case 50:
+    case 51: return "%s";
+    case 52:
+    case 53:
+    case 54:
+    case 55:
+    case 56:
+    case 57: return "%#p";
+    default: return NULL;
   }
+  // clang-format on
 }
 static struct string_buffer fmt_buf, out_buf;
 const char *cfmt(const char *fmt, int count, int types[], va_list list) {
@@ -77,52 +64,52 @@ const char *cfmt(const char *fmt, int count, int types[], va_list list) {
   for (int i = 0; fmt[i] != '\0'; i++) {
     char ch = fmt[i];
     switch (stat) {
-    case 'c':
-      if (ch == '{') {
-        stat = '{';
-      } else if (ch == '}') {
-        stat = '{';
-      } else {
-        put_to_buf(&fmt_buf, ch);
-        // stat = 'c';
-      }
-      break;
-    case '{':
-      if (ch == '{') {
-        stat = 'c';
-        put_to_buf(&fmt_buf, '{');
-      } else if (ch == ':') {
-        fmt_spec_start = fmt + i;
-        stat = 's';
-      } else if (ch == '}') {
-        int type_id = types[type_id_index++];
-        concat_to_buf(&fmt_buf, type_id_to_fmt(type_id));
-        stat = 'c';
-      } else {
-        put_to_buf(&fmt_buf, ch);
-        stat = 'c';
-      }
-      break;
-    case '}':
-      if (ch == '}') {
-        put_to_buf(&fmt_buf, ch);
-        stat = 'c';
-      } else {
-        put_to_buf(&fmt_buf, '}');
-        put_to_buf(&fmt_buf, ch);
-      }
-      break;
-    case 's':
-      if (ch == '}') {
-        fmt_spec_end = fmt + i;
-        // using spec to format;
-        int type_id = types[type_id_index++];
-        concat_to_buf(&fmt_buf, type_id_to_fmt(type_id));
-        stat = 'c';
-      } else {
-        // spec too. continue;
-      }
-      break;
+      case 'c':
+        if (ch == '{') {
+          stat = '{';
+        } else if (ch == '}') {
+          stat = '{';
+        } else {
+          put_to_buf(&fmt_buf, ch);
+          // stat = 'c';
+        }
+        break;
+      case '{':
+        if (ch == '{') {
+          stat = 'c';
+          put_to_buf(&fmt_buf, '{');
+        } else if (ch == ':') {
+          fmt_spec_start = fmt + i;
+          stat = 's';
+        } else if (ch == '}') {
+          int type_id = types[type_id_index++];
+          concat_to_buf(&fmt_buf, type_id_to_fmt(type_id));
+          stat = 'c';
+        } else {
+          put_to_buf(&fmt_buf, ch);
+          stat = 'c';
+        }
+        break;
+      case '}':
+        if (ch == '}') {
+          put_to_buf(&fmt_buf, ch);
+          stat = 'c';
+        } else {
+          put_to_buf(&fmt_buf, '}');
+          put_to_buf(&fmt_buf, ch);
+        }
+        break;
+      case 's':
+        if (ch == '}') {
+          fmt_spec_end = fmt + i;
+          // using spec to format;
+          int type_id = types[type_id_index++];
+          concat_to_buf(&fmt_buf, type_id_to_fmt(type_id));
+          stat = 'c';
+        } else {
+          // spec too. continue;
+        }
+        break;
     }
   }
   fmt = get_buf_as_c_string(&fmt_buf);
