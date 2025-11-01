@@ -8,6 +8,7 @@ extern "C" {
 void _cfmt_println(const char *fmt, int count, int types[], ...);
 const char *_cfmt_format(const char *fmt, int count, int types[], ...);
 void _cfmt_fprint(FILE *fp, const char *fmt, int count, int types[], ...);
+void cfmt_internal_test(void);
 #ifdef __cplusplus
 }
 #endif  // __cplusplus
@@ -41,17 +42,22 @@ inline int to_type_id(const float               *arg) { return 50; }
 inline int to_type_id(const double              *arg) { return 51; }
 // clang-format on
 template <typename... Args>
-const char *cfmt_format(const char *fmt, Args... args) {
-  int types[] = {-1, to_type_id(args)...};
+const char *cfmt_format_cpp(const char *fmt, int line_no, Args... args) {
+  int types[] = {line_no, to_type_id(args)...};
   return _cfmt_format(fmt, sizeof(types) / sizeof(int) - 1, types, args...);
 }
 template <typename... Args>
-void cfmt_fprint(FILE *fp, const char *fmt, Args... args) {
-  int types[] = {-1, to_type_id(args)...};
+void cfmt_fprint_cpp(FILE *fp, const char *fmt, int line_no, Args... args) {
+  int types[] = {line_no, to_type_id(args)...};
   _cfmt_fprint(fp, fmt, sizeof(types) / sizeof(int) - 1, types, args...);
 }
-#define cfmt_println(fmt, ...) cfmt_fprint(stdout, fmt "\n", ##__VA_ARGS__)
-#define cfmt_print(fmt, ...) cfmt_fprint(stdout, fmt, ##__VA_ARGS__)
+#define cfmt_println(fmt, ...) \
+  cfmt_fprint_cpp(stdout, fmt "\n", __LINE__, ##__VA_ARGS__)
+#define cfmt_print(fmt, ...) \
+  cfmt_fprint_cpp(stdout, fmt, __LINE__, ##__VA_ARGS__)
+#define cfmt_format(fmt, ...) cfmt_format_cpp(fmt, __LINE__, ##__VA_ARGS__)
+#define cfmt_fprint(fp, fmt, ...) \
+  cfmt_fprint_cpp(fp, fmt, __LINE__, ##__VA_ARGS__)
 #else
 #if defined(_MSC_VER) && !defined(__STDC_VERSION__)
 #error "We need c11 and _Generic for MSVC! Please use '/std:c11'"
@@ -135,7 +141,7 @@ void cfmt_fprint(FILE *fp, const char *fmt, Args... args) {
 #define CONCAT(a, b) MACRO_CONCAT(a, b)
 
 #define TYPE_ARRAY(COUNT, ...) \
-  EXPAND((int[]){-1, CONCAT(TYPE_ID_, COUNT)(__VA_ARGS__)})
+  EXPAND((int[]){__LINE__, CONCAT(TYPE_ID_, COUNT)(__VA_ARGS__)})
 
 #define __CFmtArgs(fmt, N, ...) \
   fmt, N, TYPE_ARRAY(N, __VA_ARGS__), ##__VA_ARGS__
