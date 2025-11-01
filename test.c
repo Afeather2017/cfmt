@@ -10,14 +10,15 @@ static int v4 = COUNT_ARGS(-6l, 7lu, -8ll, -9llu) == 4;
 static int v5 = COUNT_ARGS((float)10, 11., "12", &v0, &v1) == 5;
 static int v12 = COUNT_ARGS(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11) == 12;
 FILE *fp = NULL;
-#define Log(fmt, ...)                                                    \
-  do {                                                                   \
-    time_t current_time = time(NULL);                                    \
-    auto tm = localtime(&current_time);                                  \
-    char time_string[1024];                                              \
-    strftime(time_string, sizeof(time_string), "%d-%m-%Y %H-%M-%S", tm); \
-    cfmt_fprint(fp, "LOG {} {} {}: " fmt "\n", time_string, __LINE__,    \
-                __func__, ##__VA_ARGS__);                                \
+#include <time.h>
+#define Log(fmt, ...)                                                      \
+  do {                                                                     \
+    time_t current_time = time(NULL);                                      \
+    struct tm stm = *localtime(&current_time);                             \
+    char time_string[1024];                                                \
+    strftime(time_string, sizeof(time_string), "%d-%m-%Y %H-%M-%S", &stm); \
+    cfmt_fprint(fp, "LOG {} {} {}: " fmt "\n", time_string, __LINE__,      \
+                __func__, ##__VA_ARGS__);                                  \
   } while (0)
 int main() {
   fp = stdout;
@@ -61,6 +62,10 @@ int main() {
 
   sprintf(buf, "{}");
   result = cfmt_format("{{}}");
+  assert(0 == strcmp(buf, result));
+  
+  sprintf(buf, "{1}");
+  result = cfmt_format("{{{}}", 1);
   assert(0 == strcmp(buf, result));
 
   result = cfmt_format("{}|{}", (void *)0x1234, (const void *)0x5678);

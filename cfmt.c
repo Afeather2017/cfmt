@@ -3,9 +3,16 @@
 #include <assert.h>
 #include <ctype.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-enum cfmt_error_code { kNoError, kBufferOverflow, kWrongType, kUnknowType };
+enum cfmt_error_code {
+  kNoError,
+  kBufferOverflow,
+  kWrongType,
+  kUnknowType,
+  kUnmatchedBrace,
+};
 struct string_buffer {
   int size;
   int capacity;
@@ -163,16 +170,17 @@ const char *cfmt(const char *fmt, int count, int types[], va_list list) {
   int needed_arg_count = 0;
   enum cfmt_error_code err = kNoError;
   int line_no = types[0];
+  int i = 0;
   types++;
   // https://fmt.dev/12.0/syntax/
-  for (int i = 0; fmt[i] != '\0' && err == kNoError; i++) {
+  for (i = 0; fmt[i] != '\0' && err == kNoError; i++) {
     char ch = fmt[i];
     switch (stat) {
       case 'c':
         if (ch == '{') {
           stat = '{';
         } else if (ch == '}') {
-          stat = '{';
+          stat = '}';
         } else if (ch == '%') {
           err = concat_to_buf(&fmt_buf, "%%");
           // stat = 'c';
@@ -185,6 +193,9 @@ const char *cfmt(const char *fmt, int count, int types[], va_list list) {
         if (ch == '{') {
           stat = 'c';
           err = put_char_to_buf(&fmt_buf, '{');
+        } else if (ch == '%') {
+          stat = 'c';
+          err = concat_to_buf(&fmt_buf, "%%");
         } else if (ch == ':') {
           fmt_spec_start = fmt + i;
           stat = 's';
@@ -203,6 +214,11 @@ const char *cfmt(const char *fmt, int count, int types[], va_list list) {
         if (ch == '}') {
           err = put_char_to_buf(&fmt_buf, ch);
           stat = 'c';
+        } else if (ch == '%') {
+          stat = 'c';
+          err = concat_to_buf(&fmt_buf, "%%");
+        } else if (ch == '{') {
+          stat = '{';
         } else {
           err = put_char_to_buf(&fmt_buf, '}');
           err = put_char_to_buf(&fmt_buf, ch);
@@ -231,6 +247,21 @@ const char *cfmt(const char *fmt, int count, int types[], va_list list) {
         break;
     }
   }
+  if (err == kNoError && fmt[i] == '\0') {
+    switch (stat) {
+      case '}':
+        err = put_char_to_buf(&fmt_buf, '}');
+        break;
+      case 's':
+        err = kUnmatchedBrace;
+        break;
+      case '{':
+        err = kUnmatchedBrace;
+        break;
+      default:
+        break;
+    }
+  }
   switch (err) {
     case kNoError:
       break;
@@ -246,6 +277,9 @@ const char *cfmt(const char *fmt, int count, int types[], va_list list) {
     case kUnknowType:
       fprintf(stderr, "cfmt:%d: Unknow type when format, fmt='%s'", line_no,
               fmt);
+      break;
+    case kUnmatchedBrace:
+      fprintf(stderr, "cfmt:%d: Unmatched braces, fmt='%s'", line_no, fmt);
       break;
   }
   if (err == kNoError && needed_arg_count != count) {
@@ -277,38 +311,46 @@ void _cfmt_fprint(FILE *fp, const char *fmt, int count, int types[], ...) {
   fputs(output, fp);
 }
 void cfmt_internal_test(void) {
-  struct string_buffer buf = {};
+  void *ptr = malloc(sizeof(struct string_buffer));
+  struct string_buffer *buf = (struct string_buffer *)ptr;
   enum cfmt_error_code err;
-  string_buffer_init(&buf);
-  buf.capacity = 10;
-  for (int i = 0; i < 10; i++) err = put_char_to_buf(&buf, '0' + i);
-  assert(0 == strcmp(get_buf_as_c_string(&buf), "012345678"));
+  string_buffer_init(buf);
+  buf->capacity = 10;
+  for (int i = 0; i < 10; i++) err = put_char_to_buf(buf, '0' + i);
+  assert(0 == strcmp(get_buf_as_c_string(buf), "012345678"));
   assert(err == kBufferOverflow);
 
-  string_buffer_init(&buf);
-  buf.capacity = 10;
-  err = concat_to_buf(&buf, "123456789abcdef");
+  string_buffer_init(buf);
+  buf->capacity = 10;
+  err = concat_to_buf(buf, "123456789abcdef");
   assert(err == kBufferOverflow);
-  assert(0 == strcmp(get_buf_as_c_string(&buf), "123456789"));
+  assert(0 == strcmp(get_buf_as_c_string(buf), "123456789"));
 
-  string_buffer_init(&buf);
-  buf.capacity = 10;
-  err = concat_to_buf(&buf, "1234567");
+  string_buffer_init(buf);
+  buf->capacity = 10;
+  err = concat_to_buf(buf, "1234567");
   assert(err == kNoError);
-  err = concat_to_buf(&buf, "89abcdef");
+  err = concat_to_buf(buf, "89abcdef");
   assert(err == kBufferOverflow);
-  puts(get_buf_as_c_string(&buf));
-  assert(0 == strcmp(get_buf_as_c_string(&buf), "123456789"));
+  puts(get_buf_as_c_string(buf));
+  assert(0 == strcmp(get_buf_as_c_string(buf), "123456789"));
 
-  string_buffer_init(&buf);
-  buf.capacity = 10;
-  err = append_data_to_buf(&buf, "0123abcdefg", 4);
+  string_buffer_init(buf);
+  buf->capacity = 10;
+  err = append_data_to_buf(buf, "0123abcdefg", 4);
   assert(err == kNoError);
-  assert(0 == strcmp(get_buf_as_c_string(&buf), "0123"));
-  err = append_data_to_buf(&buf, "456789abcd", 6);
+  assert(0 == strcmp(get_buf_as_c_string(buf), "0123"));
+  err = append_data_to_buf(buf, "456789abcd", 6);
   assert(err == kBufferOverflow);
-  assert(0 == strcmp(get_buf_as_c_string(&buf), "012345678"));
+  assert(0 == strcmp(get_buf_as_c_string(buf), "012345678"));
 
   char another_buf[10];
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-truncation"
+#endif
   assert(snprintf(another_buf, 10, "0123456789") >= 10);
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 }
