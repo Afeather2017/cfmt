@@ -32,7 +32,7 @@ static enum cfmt_error_code put_char_to_buf(struct string_buffer *buf,
 }
 // clang-format off
 static enum cfmt_error_code append_data_to_buf(struct string_buffer *buf,
-                                          const char *data, int len) {
+                                               const char *data, int len) {
   enum cfmt_error_code err = kNoError;
   if (buf->size + len + 1 >= buf->capacity) {
     len = buf->capacity - buf->size - 1;
@@ -53,75 +53,77 @@ static char *get_buf_as_c_string(struct string_buffer *buf) {
   buf->data[buf->size] = '\0';
   return buf->data;
 }
-static char conversion_specifier(int type_id) {
+static char conversion_specifier(enum cfmt_typeid type_id) {
   // clang-format off
   switch (type_id) {
-    case 0u: return 'c';
-    case 1u: return 'c';
-    case 2u: return 'd';
-    case 3u: return 'u';
-    case 4u: return 'd';
-    case 5u: return 'u';
-    case 6u: return 'd';
-    case 7u: return 'u';
-    case 8u: return 'd';
-    case 9u: return 'u';
-    case 10: return 'f';
-    case 11: return 'f';
+    case kChar:    return 'c';
+    case kUChar:   return 'c';
+    case kShort:   return 'd';
+    case kUShort:  return 'u';
+    case kInt:     return 'd';
+    case kUInt:    return 'u';
+    case kLong:    return 'd';
+    case kULong:   return 'u';
+    case kLLong:   return 'd';
+    case kULLong:  return 'u';
+    case kFloat:   return 'f';
+    case kDouble:  return 'f';
 
-    case 50:
-    case 51: return 's';
-    case 52:
-    case 53:
-    case 54:
-    case 55:
-    case 56:
-    case 57:
-    case 58:
-    case 59:
-    case 60:
-    case 61:
-    case 62: return 'p';
-    case 2000000000: return '?';
+    case kCharP:
+    case kUCharP:  return 's';
+    case kShortP:
+    case kUShortP:
+    case kIntP:
+    case kUIntP:
+    case kLongP:
+    case kULongP:
+    case kLLongP:
+    case kULLongP:
+    case kFloatP:
+    case kDoubleP:
+    case kVoidP:   return 'p';
+    case kUnknow:  return '?';
     default: abort();
   }
   // clang-format on
 }
-static const char *length_modifier(int type_id) {
+
+static const char *length_modifier(enum cfmt_typeid type_id) {
   // clang-format off
   switch (type_id) {
-    case 0u:
-    case 1u: return "hh";
-    case 2u:
-    case 3u: return "h";
-    case 4u:
-    case 5u: return "";
-    case 6u:
-    case 7u: return "l";
-    case 8u:
-    case 9u: return "ll";
-    case 10: return "";
-    case 11: return "l";
+    case kChar:
+    case kUChar:   return "hh";
+    case kShort:
+    case kUShort:  return "h";
+    case kInt:
+    case kUInt:    return "";
+    case kLong:
+    case kULong:   return "l";
+    case kLLong:
+    case kULLong:  return "ll";
+    case kFloat:   return "";
+    case kDouble:  return "l";
 
-    case 50:
-    case 51:
-    case 52:
-    case 53:
-    case 54:
-    case 55:
-    case 56:
-    case 57:
-    case 58:
-    case 59:
-    case 60:
-    case 61:
-    case 62:
-    case 2000000000: return "";
+    case kCharP:
+    case kUCharP:
+    case kShortP:
+    case kUShortP:
+    case kIntP:
+    case kUIntP:
+    case kLongP:
+    case kULongP:
+    case kLLongP:
+    case kULLongP:
+    case kFloatP:
+    case kDoubleP:
+    case kVoidP:
+    case kUnknow:  return "";
     default: abort();
   }
   // clang-format on
 }
-static enum cfmt_error_code append_spec(struct string_buffer *buf, int type_id,
+static enum cfmt_error_code append_spec(struct string_buffer *buf,
+                                        enum cfmt_typeid type_id,
                                         const char *spec, int spec_len) {
   put_char_to_buf(buf, '%');
   if (spec_len == 0 || spec == NULL) {
@@ -160,7 +162,8 @@ static enum cfmt_error_code append_spec(struct string_buffer *buf, int type_id,
   return err;
 }
 _Thread_local static struct string_buffer fmt_buf, out_buf;
-const char *cfmt(const char *fmt, int count, int types[], va_list list) {
+const char *cfmt(const char *fmt, int count, enum cfmt_typeid types[],
+                 va_list list) {
   char stat = 'c';
   const char *fmt_spec_start = NULL;
   const char *fmt_spec_end = NULL;
@@ -200,8 +203,8 @@ const char *cfmt(const char *fmt, int count, int types[], va_list list) {
           fmt_spec_start = fmt + i;
           stat = 's';
         } else if (ch == '}') {
-          int type_id =
-              type_id_index >= count ? 2000000000 : types[type_id_index++];
+          enum cfmt_typeid type_id =
+              type_id_index >= count ? kUnknow : types[type_id_index++];
           err = append_spec(&fmt_buf, type_id, NULL, 0);
           needed_arg_count++;
           stat = 'c';
@@ -227,8 +230,8 @@ const char *cfmt(const char *fmt, int count, int types[], va_list list) {
       case 's':
         if (ch == '}') {
           fmt_spec_end = fmt + i;
-          int type_id =
-              type_id_index >= count ? 2000000000 : types[type_id_index++];
+          enum cfmt_typeid type_id =
+              type_id_index >= count ? kUnknow : types[type_id_index++];
           // It is ':', so skip it.
           fmt_spec_start++;
           int spec_len = (int)(fmt_spec_end - fmt_spec_start);
@@ -237,8 +240,8 @@ const char *cfmt(const char *fmt, int count, int types[], va_list list) {
           needed_arg_count++;
           stat = 'c';
         } else if (ch == '*') {
-          int type_id =
-              type_id_index >= count ? 2000000000 : types[type_id_index++];
+          enum cfmt_typeid type_id =
+              type_id_index >= count ? kUnknow : types[type_id_index++];
           if (type_id != 4) err = kWrongType;
           needed_arg_count++;
         } else {
@@ -299,12 +302,18 @@ const char *cfmt(const char *fmt, int count, int types[], va_list list) {
   }
   return get_buf_as_c_string(&out_buf);
 }
-const char *_cfmt_format(const char *fmt, int count, int types[], ...) {
+// clang-format off
+const char *_cfmt_format(const char *fmt, int count,
+                         enum cfmt_typeid types[], ...) {
+  // clang-format on
   va_list list;
   va_start(list, types);
   return cfmt(fmt, count, types, list);
 }
-void _cfmt_fprint(FILE *fp, const char *fmt, int count, int types[], ...) {
+// clang-format off
+void _cfmt_fprint(FILE *fp, const char *fmt, int count,
+                  enum cfmt_typeid types[], ...) {
+  // clang-format on
   va_list list;
   va_start(list, types);
   const char *output = cfmt(fmt, count, types, list);

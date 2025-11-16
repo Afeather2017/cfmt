@@ -5,9 +5,44 @@
 extern "C" {
 #endif  // __cplusplus
 #include <stdio.h>
-void _cfmt_println(const char *fmt, int count, int types[], ...);
-const char *_cfmt_format(const char *fmt, int count, int types[], ...);
-void _cfmt_fprint(FILE *fp, const char *fmt, int count, int types[], ...);
+enum cfmt_typeid {
+  kChar = 0,
+  kUChar,
+  kShort,
+  kUShort,
+  kInt,
+  kUInt,
+  kLong,
+  kULong,
+  kLLong,
+  kULLong,
+  kFloat,
+  kDouble,
+
+  kCharP = 50,
+  kUCharP,
+  kShortP,
+  kUShortP,
+  kIntP,
+  kUIntP,
+  kLongP,
+  kULongP,
+  kLLongP,
+  kULLongP,
+  kFloatP,
+  kDoubleP,
+  kVoidP,
+
+  kUnknow = (int)2e9,
+};
+// clang-format off
+void _cfmt_println(const char *fmt, int count,
+                   enum cfmt_typeid types[], ...);
+const char *_cfmt_format(const char *fmt, int count,
+                         enum cfmt_typeid types[], ...);
+void _cfmt_fprint(FILE *fp, const char *fmt, int count,
+                  enum cfmt_typeid types[], ...);
+// clang-format on
 void cfmt_internal_test(void);
 #ifdef __cplusplus
 }
@@ -15,40 +50,40 @@ void cfmt_internal_test(void);
 
 #ifdef __cplusplus
 // clang-format off
-inline int to_type_id(const char                 arg) { return 0u; }
-inline int to_type_id(const unsigned char        arg) { return 1u; }
-inline int to_type_id(const short                arg) { return 2u; }
-inline int to_type_id(const unsigned short       arg) { return 3u; }
-inline int to_type_id(const int                  arg) { return 4u; }
-inline int to_type_id(const unsigned int         arg) { return 5u; }
-inline int to_type_id(const long                 arg) { return 6u; }
-inline int to_type_id(const unsigned long        arg) { return 7u; }
-inline int to_type_id(const long long            arg) { return 8u; }
-inline int to_type_id(const unsigned long long   arg) { return 9u; }
-inline int to_type_id(const float                arg) { return 10; }
-inline int to_type_id(const double               arg) { return 11; }
+inline cfmt_typeid to_typeid(const char                arg) { return kChar; }
+inline cfmt_typeid to_typeid(const unsigned char       arg) { return kUChar; }
+inline cfmt_typeid to_typeid(const short               arg) { return kShort; }
+inline cfmt_typeid to_typeid(const unsigned short      arg) { return kUShort; }
+inline cfmt_typeid to_typeid(const int                 arg) { return kInt; }
+inline cfmt_typeid to_typeid(const unsigned int        arg) { return kUInt; }
+inline cfmt_typeid to_typeid(const long                arg) { return kLong; }
+inline cfmt_typeid to_typeid(const unsigned long       arg) { return kULong; }
+inline cfmt_typeid to_typeid(const long long           arg) { return kLLong; }
+inline cfmt_typeid to_typeid(const unsigned long long  arg) { return kULLong; }
+inline cfmt_typeid to_typeid(const float               arg) { return kFloat; }
+inline cfmt_typeid to_typeid(const double              arg) { return kDouble; }
 
-inline int to_type_id(const char                *arg) { return 50; }
-inline int to_type_id(const unsigned char       *arg) { return 51; }
-inline int to_type_id(const short               *arg) { return 52; }
-inline int to_type_id(const unsigned short      *arg) { return 53; }
-inline int to_type_id(const int                 *arg) { return 54; }
-inline int to_type_id(const unsigned int        *arg) { return 55; }
-inline int to_type_id(const long                *arg) { return 56; }
-inline int to_type_id(const unsigned long       *arg) { return 57; }
-inline int to_type_id(const long long           *arg) { return 58; }
-inline int to_type_id(const unsigned long long  *arg) { return 59; }
-inline int to_type_id(const float               *arg) { return 50; }
-inline int to_type_id(const double              *arg) { return 51; }
+inline cfmt_typeid to_typeid(const char               *arg) { return kCharP; }
+inline cfmt_typeid to_typeid(const unsigned char      *arg) { return kUCharP; }
+inline cfmt_typeid to_typeid(const short              *arg) { return kShortP; }
+inline cfmt_typeid to_typeid(const unsigned short     *arg) { return kUShortP; }
+inline cfmt_typeid to_typeid(const int                *arg) { return kIntP; }
+inline cfmt_typeid to_typeid(const unsigned int       *arg) { return kUIntP; }
+inline cfmt_typeid to_typeid(const long               *arg) { return kLongP; }
+inline cfmt_typeid to_typeid(const unsigned long      *arg) { return kULongP; }
+inline cfmt_typeid to_typeid(const long long          *arg) { return kLLongP; }
+inline cfmt_typeid to_typeid(const unsigned long long *arg) { return kULLongP; }
+inline cfmt_typeid to_typeid(const float              *arg) { return kFloatP; }
+inline cfmt_typeid to_typeid(const double             *arg) { return kDoubleP; }
 // clang-format on
 template <typename... Args>
 const char *cfmt_format_cpp(const char *fmt, int line_no, Args... args) {
-  int types[] = {line_no, to_type_id(args)...};
+  cfmt_typeid types[] = {static_cast<cfmt_typeid>(line_no), to_typeid(args)...};
   return _cfmt_format(fmt, sizeof(types) / sizeof(int) - 1, types, args...);
 }
 template <typename... Args>
 void cfmt_fprint_cpp(FILE *fp, const char *fmt, int line_no, Args... args) {
-  int types[] = {line_no, to_type_id(args)...};
+  cfmt_typeid types[] = {static_cast<cfmt_typeid>(line_no), to_typeid(args)...};
   _cfmt_fprint(fp, fmt, sizeof(types) / sizeof(int) - 1, types, args...);
 }
 #define cfmt_println(fmt, ...) \
@@ -77,50 +112,50 @@ void cfmt_fprint_cpp(FILE *fp, const char *fmt, int line_no, Args... args) {
                2000000000)
 #endif  // defined(_MSC_VER)
 
-#define TYPE_ID(v)                    \
-  _Generic((v),                       \
-      char: 0,                        \
-      unsigned char: 1,               \
-      short: 2,                       \
-      unsigned short: 3,              \
-      int: 4,                         \
-      unsigned int: 5,                \
-      long: 6,                        \
-      unsigned long: 7,               \
-      long long: 8,                   \
-      unsigned long long: 9,          \
-      float: 10,                      \
-      double: 11,                     \
-                                      \
-      const char *: 50,               \
-      const unsigned char *: 51,      \
-      const short *: 52,              \
-      const unsigned short *: 53,     \
-      const int *: 54,                \
-      const unsigned int *: 55,       \
-      const long *: 56,               \
-      const unsigned long *: 57,      \
-      const long long *: 58,          \
-      const unsigned long long *: 59, \
-      const float *: 60,              \
-      const double *: 61,             \
-      void *: 62,                     \
-                                      \
-      char *: 50,                     \
-      unsigned char *: 51,            \
-      short *: 52,                    \
-      unsigned short *: 53,           \
-      int *: 54,                      \
-      unsigned int *: 55,             \
-      long *: 56,                     \
-      unsigned long *: 57,            \
-      long long *: 58,                \
-      unsigned long long *: 59,       \
-      float *: 60,                    \
-      double *: 61,                   \
-      const void *: 62,               \
-                                      \
-      default: (int)2e9)
+#define TYPE_ID(v)                          \
+  _Generic((v),                             \
+      char: kChar,                          \
+      unsigned char: kUChar,                \
+      short: kShort,                        \
+      unsigned short: kUShort,              \
+      int: kInt,                            \
+      unsigned int: kUInt,                  \
+      long: kLong,                          \
+      unsigned long: kULong,                \
+      long long: kLLong,                    \
+      unsigned long long: kULLong,          \
+      float: kFloat,                        \
+      double: kDouble,                      \
+                                            \
+      const char *: kCharP,                 \
+      const unsigned char *: kUCharP,       \
+      const short *: kShortP,               \
+      const unsigned short *: kUShortP,     \
+      const int *: kIntP,                   \
+      const unsigned int *: kUIntP,         \
+      const long *: kLongP,                 \
+      const unsigned long *: kULongP,       \
+      const long long *: kLLongP,           \
+      const unsigned long long *: kULLongP, \
+      const float *: kFloatP,               \
+      const double *: kDoubleP,             \
+      void *: kVoidP,                       \
+                                            \
+      char *: kCharP,                       \
+      unsigned char *: kUCharP,             \
+      short *: kShortP,                     \
+      unsigned short *: kUShortP,           \
+      int *: kIntP,                         \
+      unsigned int *: kUIntP,               \
+      long *: kLongP,                       \
+      unsigned long *: kULongP,             \
+      long long *: kLLongP,                 \
+      unsigned long long *: kULLongP,       \
+      float *: kFloatP,                     \
+      double *: kDoubleP,                   \
+      const void *: kVoidP,                 \
+                                            \
+      default: kUnknow)
 
 #define TYPE_ID_12(v, ...) EXPAND(TYPE_ID(v), TYPE_ID_11(__VA_ARGS__))
 #define TYPE_ID_11(v, ...) EXPAND(TYPE_ID(v), TYPE_ID_10(__VA_ARGS__))
@@ -135,13 +170,13 @@ void cfmt_fprint_cpp(FILE *fp, const char *fmt, int line_no, Args... args) {
 #define TYPE_ID_2(v, ...) EXPAND(TYPE_ID(v), TYPE_ID_1(__VA_ARGS__))
 #define TYPE_ID_1(v) EXPAND(TYPE_ID(v))
 #define TYPE_ID_0()
-#define TYPE_ID_2000000000()
+#define TYPE_ID_2000000000() abort()
 
 #define MACRO_CONCAT(a, b) a##b
 #define CONCAT(a, b) MACRO_CONCAT(a, b)
 
 #define TYPE_ARRAY(COUNT, ...) \
-  EXPAND((int[]){__LINE__, CONCAT(TYPE_ID_, COUNT)(__VA_ARGS__)})
+  EXPAND((enum cfmt_typeid[]){__LINE__, CONCAT(TYPE_ID_, COUNT)(__VA_ARGS__)})
 
 #define __CFmtArgs(fmt, N, ...) \
   fmt, N, TYPE_ARRAY(N, __VA_ARGS__), ##__VA_ARGS__

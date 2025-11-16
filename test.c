@@ -63,7 +63,7 @@ int main() {
   sprintf(buf, "{}");
   result = cfmt_format("{{}}");
   assert(0 == strcmp(buf, result));
-  
+
   sprintf(buf, "{1}");
   result = cfmt_format("{{{}}", 1);
   assert(0 == strcmp(buf, result));
