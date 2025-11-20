@@ -34,6 +34,8 @@ enum cfmt_typeid {
   kFloatP,
   kDoubleP,
   kVoidP,
+
+  kStructTmP,
 };
 enum cfmt_error_code {
   kNoError,
@@ -42,6 +44,8 @@ enum cfmt_error_code {
   kUnknowType,
   kUnmatchedBrace,
 };
+// In MSVC, va_list is only a const char*. So arguments will not be popped
+// during recursivly processing. We have to wrap it and use it with reference.
 struct cfmt_valist {
   va_list wrapped;
 };
@@ -166,6 +170,8 @@ void cfmt_fprint_cpp(FILE *fp, const char *fmt, int line_no, Args... args) {
       float *: kFloatP,                     \
       double *: kDoubleP,                   \
       const void *: kVoidP,                 \
+                                            \
+      struct tm *: kStructTmP,              \
                                             \
       default: kUnknow)
 

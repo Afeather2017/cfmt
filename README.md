@@ -79,7 +79,8 @@ cl cfmt.o test.cc
 
 ### How to format print a struct?
 
-Well, this need more work. Anyway, currently, this is not supported. But you can try this:
+Well, you are able to do this in 2 ways.
+1. convert it to a `char *`.
 
 ```c
 const char *convert_to_string(struct A *a) {
@@ -99,7 +100,7 @@ And in C++, you can print std::string like this:
 cfmt_println("{}", str.c_str());
 ```
 
-cfmt is a wrapper of printf, so it cannot do what printf cannot do.
+2. Modify cfmt, see how I print `struct tm *` in this project.
 
 ### Wrap cfmt?
 

@@ -6,13 +6,12 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 struct string_buffer {
   int size;
   int capacity;
   char *data;
 };
-// In MSVC, va_list is only a const char*. So arguments will not be popped
-// during recursivly process. We have to wrap it and use it with reference.
 static void string_buffer_init(struct string_buffer *buf, char *data, int len) {
   buf->capacity = len;
   buf->size = 0;
@@ -55,6 +54,9 @@ static enum cfmt_error_code concat_vsnprintf_one(struct string_buffer *buf,
   char *start = buf->data + buf->size;
   int size = buf->capacity - buf->size;
   switch (type_id) {
+    case kUnknow:
+      return kUnknowType;
+      break;
     case kChar:
     case kUChar:
     case kShort:
@@ -96,8 +98,9 @@ static enum cfmt_error_code concat_vsnprintf_one(struct string_buffer *buf,
     case kVoidP:
       ret = snprintf(start, size, fmt, va_arg(list->wrapped, void *));
       break;
-    case kUnknow:
-      return kUnknowType;
+    case kStructTmP:
+      ret = strftime(start, size, "%Y%m%d-%H%M%S",
+                     va_arg(list->wrapped, struct tm *));
       break;
     default:
       abort();
@@ -141,7 +144,7 @@ static char conversion_specifier(enum cfmt_typeid type_id) {
     case kDoubleP:
     case kVoidP:   return 'p';
     case kUnknow:  return '?';
-    default: return 's';
+    default:       return 's';
   }
   // clang-format on
 }
@@ -176,7 +179,7 @@ static const char *length_modifier(enum cfmt_typeid type_id) {
     case kDoubleP:
     case kVoidP:
     case kUnknow:
-    default: return "";
+    default:       return "";
   }
   // clang-format on
 }
@@ -328,6 +331,7 @@ static const char *cfmt(const char *fmt, int count, enum cfmt_typeid types[],
           enum cfmt_typeid type_id =
               type_id_index >= count ? kUnknow : types[type_id_index++];
           err = format_and_append(&fmt_buf, NULL, type_id, list);
+          needed_arg_count++;
         } else {
           err = put_char_to_buf(&fmt_buf, ch);
           // stat = ':';

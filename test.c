@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <string.h>
+#include <time.h>
 
 #include "cfmt.h"
 const static int v0 = COUNT_ARGS() == 0;
@@ -130,14 +131,28 @@ int main() {
   cfmt_println("{} {}|", 1, 2, 3);
 
   // test 21 arguments
-  cfmt_println(
-      "{} {} {} {} {} {} {} {} {} {} {}"
-      " {} {} {} {} {} {} {} {} {} {}",
+  cfmt_println("{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}",
       0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
       21);
 
   Log("{}{}", "This is", " a log message");
   cfmt_println("success!");
+  {
+    time_t current_time = time(NULL);
+    struct tm stm = *localtime(&current_time);
+    char a[400];
+    strcpy(a, cfmt_format("{}", &stm));
+    char b[400];
+    strftime(b, sizeof(b), "%Y%m%d-%H%M%S", &stm);
+
+    cfmt_print("test struct tm *, expect {}, got {}", b, a);
+    assert(strcmp(a, b) == 0);
+    cfmt_println("success!");
+  }
+  {
+    struct unknow_type { int a, b; } v;
+    cfmt_println("test format unknow type {}", &v);
+  }
   cfmt_internal_test();
   va_arg_test();
   return 0;
