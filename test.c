@@ -9,6 +9,8 @@ static int v3 = COUNT_ARGS((unsigned short)3, -4, 5u) == 3;
 static int v4 = COUNT_ARGS(-6l, 7lu, -8ll, -9llu) == 4;
 static int v5 = COUNT_ARGS((float)10, 11., "12", &v0, &v1) == 5;
 static int v12 = COUNT_ARGS(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11) == 12;
+static int v22 = COUNT_ARGS(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
+                            15, 16, 17, 18, 19, 20, 21) == 22;
 FILE *fp = NULL;
 #include <time.h>
 #define Log(fmt, ...)                                                      \
@@ -20,8 +22,46 @@ FILE *fp = NULL;
     cfmt_fprint(fp, "LOG {} {} {}: " fmt "\n", time_string, __LINE__,      \
                 __func__, ##__VA_ARGS__);                                  \
   } while (0)
+static void va_arg_recursive_vprocess_char(char *buf, int n,
+                                           struct cfmt_valist *list) {
+  if (n == 0) return;
+  buf[0] = (char)va_arg(list->wrapped, int);
+  va_arg_recursive_vprocess_char(buf + 1, n - 1, list);
+}
+static void va_arg_recursive_process_char(char *buf, int n, ...) {
+  struct cfmt_valist list;
+  va_start(list.wrapped, n);
+  va_arg_recursive_vprocess_char(buf, n / 2, &list);
+  va_arg_recursive_vprocess_char(buf + n / 2, n / 2 + (n & 1), &list);
+  va_end(list.wrapped);
+}
+static void stdarg_promote_test(int n, ...) {
+  struct cfmt_valist list;
+  va_start(list.wrapped, n);
+  assert('0' == va_arg(list.wrapped, int));
+  assert(1 == va_arg(list.wrapped, int));
+  assert(2 == va_arg(list.wrapped, int));
+  assert(3 == va_arg(list.wrapped, long));
+  assert(4 == va_arg(list.wrapped, long long));
+  assert(5 == va_arg(list.wrapped, double));
+  assert(6 == va_arg(list.wrapped, double));
+  va_end(list.wrapped);
+}
+static void va_arg_test(void) {
+  cfmt_print("testing stdarg...");
+  {
+    char array[10] = {};
+    const char *s = "0123456";
+    va_arg_recursive_process_char(array, 4, s[0], s[1], s[2], s[3]);
+    assert(0 == strcmp(array, "0123"));
+  }
+  stdarg_promote_test(7, (char)'0', (short)1, (int)2, (long)3, (long long)4,
+                      (float)5, (double)6);
+  cfmt_println("success!");
+}
 int main() {
   fp = stdout;
+  cfmt_print("testing ARG_COUNT...");
   assert(v0);
   assert(v1);
   assert(v2);
@@ -29,6 +69,9 @@ int main() {
   assert(v4);
   assert(v5);
   assert(v12);
+  assert(v22);
+  cfmt_println("success!");
+  cfmt_println("testing cfmt and print...");
   assert(0 == strcmp("cfmt", cfmt_format("cfmt")));
   assert(0 == strcmp("0", cfmt_format("{}", CH(0))));
   const char *result = NULL;
@@ -86,7 +129,16 @@ int main() {
   cfmt_println("{}|");
   cfmt_println("{} {}|", 1, 2, 3);
 
+  // test 21 arguments
+  cfmt_println(
+      "{} {} {} {} {} {} {} {} {} {} {}"
+      " {} {} {} {} {} {} {} {} {} {}",
+      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+      21);
+
   Log("{}{}", "This is", " a log message");
+  cfmt_println("success!");
   cfmt_internal_test();
+  va_arg_test();
   return 0;
 }
