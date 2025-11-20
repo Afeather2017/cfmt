@@ -6,7 +6,8 @@ extern "C" {
 #endif  // __cplusplus
 #include <stdio.h>
 enum cfmt_typeid {
-  kChar = 0,
+  kUnknow = 0,
+  kChar = 10,
   kUChar,
   kShort,
   kUShort,
@@ -32,8 +33,13 @@ enum cfmt_typeid {
   kFloatP,
   kDoubleP,
   kVoidP,
-
-  kUnknow = (int)2e9,
+};
+enum cfmt_error_code {
+  kNoError,
+  kBufferOverflow,
+  kWrongType,
+  kUnknowType,
+  kUnmatchedBrace,
 };
 // clang-format off
 void _cfmt_println(const char *fmt, int count,
@@ -42,6 +48,8 @@ const char *_cfmt_format(const char *fmt, int count,
                          enum cfmt_typeid types[], ...);
 void _cfmt_fprint(FILE *fp, const char *fmt, int count,
                   enum cfmt_typeid types[], ...);
+enum cfmt_error_code last_cfmt_errno();
+const char *cfmt_strerr();
 // clang-format on
 void cfmt_internal_test(void);
 #ifdef __cplusplus
@@ -98,18 +106,18 @@ void cfmt_fprint_cpp(FILE *fp, const char *fmt, int line_no, Args... args) {
 #error "We need c11 and _Generic for MSVC! Please use '/std:c11'"
 #endif
 
-#define __COUNT_ARGS(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, N, \
-                     ...)                                                      \
+#define __COUNT_ARGS(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, \
+                     _13, _14, _15, _16, _17, _18, _19, _20, _21, _22, N, ...)   \
   N
 #define EXPAND(...) __VA_ARGS__
 #if defined(__STRICT_ANSI__)
-#define COUNT_ARGS(...)                                                      \
-  __COUNT_ARGS(0, ##__VA_ARGS__ __VA_OPT__(, ) 12, 11, 10, 9, 8, 7, 6, 5, 4, \
-               3, 2, 1, 0, 2000000000)
+#define COUNT_ARGS(...)                                                        \
+  __COUNT_ARGS(0, ##__VA_ARGS__ __VA_OPT__(, ) 22, 21, 20, 19, 18, 17, 16, 15, \
+               14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 2000000000)
 #else
-#define COUNT_ARGS(...)                                                    \
-  __COUNT_ARGS(0, ##__VA_ARGS__, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, \
-               2000000000)
+#define COUNT_ARGS(...)                                                      \
+  __COUNT_ARGS(0, ##__VA_ARGS__, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, \
+               11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 2000000000)
 #endif  // defined(_MSC_VER)
 
 #define TYPE_ID(v)                          \
@@ -157,6 +165,16 @@ void cfmt_fprint_cpp(FILE *fp, const char *fmt, int line_no, Args... args) {
                                             \
       default: kUnknow)
 
+#define TYPE_ID_22(v, ...) EXPAND(TYPE_ID(v), TYPE_ID_21(__VA_ARGS__))
+#define TYPE_ID_21(v, ...) EXPAND(TYPE_ID(v), TYPE_ID_20(__VA_ARGS__))
+#define TYPE_ID_20(v, ...) EXPAND(TYPE_ID(v), TYPE_ID_19(__VA_ARGS__))
+#define TYPE_ID_19(v, ...) EXPAND(TYPE_ID(v), TYPE_ID_18(__VA_ARGS__))
+#define TYPE_ID_18(v, ...) EXPAND(TYPE_ID(v), TYPE_ID_17(__VA_ARGS__))
+#define TYPE_ID_17(v, ...) EXPAND(TYPE_ID(v), TYPE_ID_16(__VA_ARGS__))
+#define TYPE_ID_16(v, ...) EXPAND(TYPE_ID(v), TYPE_ID_15(__VA_ARGS__))
+#define TYPE_ID_15(v, ...) EXPAND(TYPE_ID(v), TYPE_ID_14(__VA_ARGS__))
+#define TYPE_ID_14(v, ...) EXPAND(TYPE_ID(v), TYPE_ID_13(__VA_ARGS__))
+#define TYPE_ID_13(v, ...) EXPAND(TYPE_ID(v), TYPE_ID_12(__VA_ARGS__))
 #define TYPE_ID_12(v, ...) EXPAND(TYPE_ID(v), TYPE_ID_11(__VA_ARGS__))
 #define TYPE_ID_11(v, ...) EXPAND(TYPE_ID(v), TYPE_ID_10(__VA_ARGS__))
 #define TYPE_ID_10(v, ...) EXPAND(TYPE_ID(v), TYPE_ID_9(__VA_ARGS__))
