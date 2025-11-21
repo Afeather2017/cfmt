@@ -77,10 +77,11 @@ cl cfmt.c /c /std:c11
 cl cfmt.o test.cc
 ```
 
-### How to format print a struct?
+### How to format print a struct and class?
 
 Well, you are able to do this in 2 ways.
-1. convert it to a `char *`.
+
+#### convert it to a `char *`.
 
 ```c
 const char *convert_to_string(struct A *a) {
@@ -100,15 +101,20 @@ And in C++, you can print std::string like this:
 cfmt_println("{}", str.c_str());
 ```
 
-2. Modify cfmt, see how I print `struct tm *` in this project.
+#### Modify cfmt
+
+1. In C, see how I print `struct tm *` in this project.
+
+2. In C++, struct/class is converted to its pointer, and you are going to set
+   a formatter function, which converts all of these types to `char *` and fill
+   into a buffer. I've showed how to print `std::string` and `std::string_view`
 
 ### Wrap cfmt?
 
 cfmt is macros. You can only use macro to wrap it.
 
 ```c
-#define Log(fmt, ...) cfmt_fprint(log_file, "Log {}:{}:" fmt "\n", __func__, __LINE__, ##_
-_VA_ARGS__)
+#define Log(fmt, ...) cfmt_fprint(log_file, "Log {}:{}:" fmt "\n", __func__, __LINE__, ##__VA_ARGS__)
 ```
 
 ## API references
@@ -128,8 +134,7 @@ const char *str = cfmt_format("{}", 12);
 free(str);
 ```
 
-arg `fmt`: [format string](https://man.archlinux.org/man/printf.3#Format_of_the_format_str
-ing)
+arg `fmt`: [format string](https://man.archlinux.org/man/printf.3#Format_of_the_format_string)
 
 ## More Example
 

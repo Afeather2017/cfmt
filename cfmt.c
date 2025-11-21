@@ -7,11 +7,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-struct string_buffer {
-  int size;
-  int capacity;
-  char *data;
-};
 static void string_buffer_init(struct string_buffer *buf, char *data, int len) {
   buf->capacity = len;
   buf->size = 0;
@@ -44,6 +39,9 @@ static enum cfmt_error_code concat_to_buf(struct string_buffer *buf,
                                           const char *str) {
   return append_data_to_buf(buf, str, strlen(str));
 }
+
+static cfmt_formatter_func_t default_formatter = NULL;
+
 static enum cfmt_error_code concat_vsnprintf_one(struct string_buffer *buf,
                                                  enum cfmt_typeid type_id,
                                                  const char *fmt,
@@ -103,7 +101,8 @@ static enum cfmt_error_code concat_vsnprintf_one(struct string_buffer *buf,
                      va_arg(list->wrapped, struct tm *));
       break;
     default:
-      abort();
+      if (default_formatter == NULL) abort();
+      return default_formatter(buf, type_id, fmt, list);
   }
   if (ret < 0) abort();
   if (ret >= size) return kBufferOverflow;
@@ -292,7 +291,6 @@ static const char *cfmt(const char *fmt, int count, enum cfmt_typeid types[],
         } else if (ch == '}') {
           enum cfmt_typeid type_id =
               type_id_index >= count ? kUnknow : types[type_id_index++];
-          // TODO
           err = format_and_append(&out_buf, &fmt_buf, type_id, list);
           needed_arg_count++;
           stat = 'c';
@@ -401,6 +399,9 @@ void _cfmt_fprint(FILE *fp, const char *fmt, int count,
   const char *output = cfmt(fmt, count, types, &list);
   va_end(list.wrapped);
   fputs(output, fp);
+}
+void cfmt_set_default_formatter(cfmt_formatter_func_t func) {
+  default_formatter = func;
 }
 void cfmt_internal_test(void) {
   cfmt_print("testing {}", __func__);

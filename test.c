@@ -132,8 +132,8 @@ int main() {
 
   // test 21 arguments
   cfmt_println("{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}",
-      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
-      21);
+               0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
+               19, 20, 21);
 
   Log("{}{}", "This is", " a log message");
   cfmt_println("success!");
@@ -150,7 +150,9 @@ int main() {
     cfmt_println("success!");
   }
   {
-    struct unknow_type { int a, b; } v;
+    struct unknow_type {
+      int a, b;
+    } v;
     cfmt_println("test format unknow type {}", &v);
   }
   cfmt_internal_test();
