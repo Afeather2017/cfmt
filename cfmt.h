@@ -6,10 +6,11 @@ extern "C" {
 #endif  // __cplusplus
 #include <stdarg.h>
 #include <stdio.h>
+#define CFMT_OUTPUT_SIZE 60000
 struct string_buffer {
   int size;
   int capacity;
-  char *data;
+  char* data;
 };
 enum cfmt_typeid {
   kUnknow,
@@ -52,18 +53,20 @@ enum cfmt_error_code {
   kNoError,
   kBufferOverflow,
   kWrongType,
+  kWrongFormatSpec,
   kUnknowType,
   kUnmatchedBrace,
+  kUnmatchedArgCount,
 };
 // In MSVC, va_list is only a const char*. So arguments will not be popped
 // during recursivly processing. We have to wrap it and use it with reference.
 struct cfmt_valist {
   va_list wrapped;
 };
-typedef enum cfmt_error_code (*cfmt_formatter_func_t)(struct string_buffer *buf,
+typedef enum cfmt_error_code (*cfmt_formatter_func_t)(struct string_buffer* buf,
                                                       enum cfmt_typeid type_id,
-                                                      const char *fmt,
-                                                      struct cfmt_valist *list);
+                                                      const char* fmt,
+                                                      struct cfmt_valist* list);
 // clang-format off
 void _cfmt_println(const char *fmt, int count,
                    enum cfmt_typeid types[], ...);
@@ -71,7 +74,7 @@ const char *_cfmt_format(const char *fmt, int count,
                          enum cfmt_typeid types[], ...);
 void _cfmt_fprint(FILE *fp, const char *fmt, int count,
                   enum cfmt_typeid types[], ...);
-enum cfmt_error_code last_cfmt_errno(void);
+enum cfmt_error_code cfmt_last_errno(void);
 const char *cfmt_strerr(void);
 // clang-format on
 void cfmt_internal_test(void);
@@ -83,7 +86,7 @@ void cfmt_set_default_formatter(cfmt_formatter_func_t func);
 #ifdef __cplusplus
 // All of this type should be used with pointer, so return pointer by default
 template <typename T>
-auto cfmt_convert(const T &val) {
+auto cfmt_convert(const T& val) {
   return &val;
 }
 // clang-format off
@@ -143,24 +146,24 @@ inline auto cfmt_to_typeid(const double             *arg) { return kDoubleP; }
 
 #include <string>
 #include <string_view>
-inline auto cfmt_to_typeid(const std::string &arg) { return kStdString; }
-inline auto cfmt_to_typeid(const std::string_view &arg) {
+inline auto cfmt_to_typeid(const std::string& arg) { return kStdString; }
+inline auto cfmt_to_typeid(const std::string_view& arg) {
   return kStdStringView;
 }
 struct NonCopyableNonMovable;
-inline auto cfmt_to_typeid(const NonCopyableNonMovable &arg) {
+inline auto cfmt_to_typeid(const NonCopyableNonMovable& arg) {
   return kNonCopyableAndNonMovable;
 }
 
 template <typename... Args>
-const char *cfmt_format_cpp(const char *fmt, int line_no, Args &&...args) {
+const char* cfmt_format_cpp(const char* fmt, int line_no, Args&&... args) {
   cfmt_typeid types[] = {static_cast<cfmt_typeid>(line_no),
                          cfmt_to_typeid(args)...};
   int count = sizeof(types) / sizeof(int) - 1;
   return _cfmt_format(fmt, count, types, cfmt_convert(args)...);
 }
 template <typename... Args>
-void cfmt_fprint_cpp(FILE *fp, const char *fmt, int line_no, Args &&...args) {
+void cfmt_fprint_cpp(FILE* fp, const char* fmt, int line_no, Args&&... args) {
   cfmt_typeid types[] = {static_cast<cfmt_typeid>(line_no),
                          cfmt_to_typeid(args)...};
   int count = sizeof(types) / sizeof(int) - 1;
@@ -194,51 +197,51 @@ void cfmt_fprint_cpp(FILE *fp, const char *fmt, int line_no, Args &&...args) {
                11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 2000000000)
 #endif  // defined(_MSC_VER)
 
-#define TYPE_ID(v)                          \
-  _Generic((v),                             \
-      char: kChar,                          \
-      unsigned char: kUChar,                \
-      short: kShort,                        \
-      unsigned short: kUShort,              \
-      int: kInt,                            \
-      unsigned int: kUInt,                  \
-      long: kLong,                          \
-      unsigned long: kULong,                \
-      long long: kLLong,                    \
-      unsigned long long: kULLong,          \
-      float: kFloat,                        \
-      double: kDouble,                      \
-                                            \
-      const char *: kCharP,                 \
-      const unsigned char *: kUCharP,       \
-      const short *: kShortP,               \
-      const unsigned short *: kUShortP,     \
-      const int *: kIntP,                   \
-      const unsigned int *: kUIntP,         \
-      const long *: kLongP,                 \
-      const unsigned long *: kULongP,       \
-      const long long *: kLLongP,           \
-      const unsigned long long *: kULLongP, \
-      const float *: kFloatP,               \
-      const double *: kDoubleP,             \
-      void *: kVoidP,                       \
-                                            \
-      char *: kCharP,                       \
-      unsigned char *: kUCharP,             \
-      short *: kShortP,                     \
-      unsigned short *: kUShortP,           \
-      int *: kIntP,                         \
-      unsigned int *: kUIntP,               \
-      long *: kLongP,                       \
-      unsigned long *: kULongP,             \
-      long long *: kLLongP,                 \
-      unsigned long long *: kULLongP,       \
-      float *: kFloatP,                     \
-      double *: kDoubleP,                   \
-      const void *: kVoidP,                 \
-                                            \
-      struct tm *: kStructTmP,              \
-                                            \
+#define TYPE_ID(v)                         \
+  _Generic((v),                            \
+      char: kChar,                         \
+      unsigned char: kUChar,               \
+      short: kShort,                       \
+      unsigned short: kUShort,             \
+      int: kInt,                           \
+      unsigned int: kUInt,                 \
+      long: kLong,                         \
+      unsigned long: kULong,               \
+      long long: kLLong,                   \
+      unsigned long long: kULLong,         \
+      float: kFloat,                       \
+      double: kDouble,                     \
+                                           \
+      const char*: kCharP,                 \
+      const unsigned char*: kUCharP,       \
+      const short*: kShortP,               \
+      const unsigned short*: kUShortP,     \
+      const int*: kIntP,                   \
+      const unsigned int*: kUIntP,         \
+      const long*: kLongP,                 \
+      const unsigned long*: kULongP,       \
+      const long long*: kLLongP,           \
+      const unsigned long long*: kULLongP, \
+      const float*: kFloatP,               \
+      const double*: kDoubleP,             \
+      void*: kVoidP,                       \
+                                           \
+      char*: kCharP,                       \
+      unsigned char*: kUCharP,             \
+      short*: kShortP,                     \
+      unsigned short*: kUShortP,           \
+      int*: kIntP,                         \
+      unsigned int*: kUIntP,               \
+      long*: kLongP,                       \
+      unsigned long*: kULongP,             \
+      long long*: kLLongP,                 \
+      unsigned long long*: kULLongP,       \
+      float*: kFloatP,                     \
+      double*: kDoubleP,                   \
+      const void*: kVoidP,                 \
+                                           \
+      struct tm*: kStructTmP,              \
+                                           \
       default: kUnknow)
 
 #define TYPE_ID_22(v, ...) EXPAND(TYPE_ID(v), TYPE_ID_21(__VA_ARGS__))

@@ -5,36 +5,36 @@
 
 #include "cfmt.h"
 
-cfmt_typeid to_typeid(const std::string &s) { return kCharP; }
-cfmt_typeid to_typeid(const std::string_view &sv) { return kStdStringView; }
+cfmt_typeid to_typeid(const std::string& s) { return kCharP; }
+cfmt_typeid to_typeid(const std::string_view& sv) { return kStdStringView; }
 // It's OK to use unmovable and uncopyable type
 struct NonCopyableNonMovable {
   int a = 10;
   int b = 11;
   NonCopyableNonMovable() = default;
-  NonCopyableNonMovable(const NonCopyableNonMovable &) = delete;
-  NonCopyableNonMovable &operator=(const NonCopyableNonMovable &) = delete;
-  NonCopyableNonMovable(NonCopyableNonMovable &&) = delete;
-  NonCopyableNonMovable &operator=(NonCopyableNonMovable &&) = delete;
+  NonCopyableNonMovable(const NonCopyableNonMovable&) = delete;
+  NonCopyableNonMovable& operator=(const NonCopyableNonMovable&) = delete;
+  NonCopyableNonMovable(NonCopyableNonMovable&&) = delete;
+  NonCopyableNonMovable& operator=(NonCopyableNonMovable&&) = delete;
 };
-cfmt_typeid to_typeid(NonCopyableNonMovable &v) {
+cfmt_typeid to_typeid(NonCopyableNonMovable& v) {
   return kNonCopyableAndNonMovable;
 }
 
-cfmt_error_code formatter_cpp(struct string_buffer *buf,
-                              enum cfmt_typeid type_id, const char *fmt,
-                              struct cfmt_valist *list) {
-  char *start = buf->data + buf->size;
+cfmt_error_code formatter_cpp(struct string_buffer* buf,
+                              enum cfmt_typeid type_id, const char* fmt,
+                              struct cfmt_valist* list) {
+  char* start = buf->data + buf->size;
   int size = buf->capacity - buf->size;
   int ret = 0;
   if (type_id == kStdStringView) {
-    auto *sv = va_arg(list->wrapped, std::string_view *);
+    auto* sv = va_arg(list->wrapped, std::string_view*);
     ret = snprintf(start, size, "%.*s", (int)sv->size(), sv->data());
   } else if (type_id == kNonCopyableAndNonMovable) {
-    auto *ncnm = va_arg(list->wrapped, NonCopyableNonMovable *);
+    auto* ncnm = va_arg(list->wrapped, NonCopyableNonMovable*);
     ret = snprintf(start, size, "{%d,%d}", ncnm->a, ncnm->b);
   } else if (type_id == kStdString) {
-    auto *sp = va_arg(list->wrapped, std::string *);
+    auto* sp = va_arg(list->wrapped, std::string*);
     ret = snprintf(start, size, "%s", sp->c_str());
   } else {
     return kUnknowType;
@@ -49,7 +49,7 @@ int main() {
   cfmt_set_default_formatter(formatter_cpp);
   assert(0 == strcmp("cfmt", cfmt_format("cfmt")));
   assert(0 == strcmp("0", cfmt_format("{}", CH(0))));
-  const char *result = NULL;
+  const char* result = NULL;
   result = cfmt_format("{} {}", (unsigned char)'1', -(short)2);
   assert(0 == strcmp("1 -2", result));
   result = cfmt_format("{} {} {}", (unsigned short)3, -4, 5u);

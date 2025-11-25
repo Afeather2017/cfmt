@@ -136,6 +136,14 @@ free(str);
 
 arg `fmt`: [format string](https://man.archlinux.org/man/printf.3#Format_of_the_format_string)
 
+If you are care about errors, call `cfmt_last_errno()` to get errno, and `cfmt_strerr()` to get the info string.
+
+```c
+result = cfmt_format("{");
+assert(cfmt_last_errno() == kUnmatchedBrace);
+cfmt_println("{}", cfmt_strerr());
+```
+
 ## More Example
 
 See test.c and test.cc
