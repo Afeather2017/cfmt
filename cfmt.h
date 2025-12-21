@@ -14,6 +14,7 @@ struct string_buffer {
 };
 enum cfmt_typeid {
   kUnknow,
+  kBool,
   kChar,
   kUChar,
   kShort,
@@ -27,6 +28,7 @@ enum cfmt_typeid {
   kFloat,
   kDouble,
 
+  kBoolP,
   kCharP,
   kUCharP,
   kShortP,
@@ -91,6 +93,7 @@ auto cfmt_convert(const T& val) {
 }
 // clang-format off
 // Built-in types
+inline auto cfmt_convert(const bool                arg) { return arg; }
 inline auto cfmt_convert(const char                arg) { return arg; }
 inline auto cfmt_convert(const unsigned char       arg) { return arg; }
 inline auto cfmt_convert(const short               arg) { return arg; }
@@ -104,6 +107,7 @@ inline auto cfmt_convert(const unsigned long long  arg) { return arg; }
 inline auto cfmt_convert(const float               arg) { return arg; }
 inline auto cfmt_convert(const double              arg) { return arg; }
 
+inline auto cfmt_convert(const bool               *arg) { return arg; }
 inline auto cfmt_convert(const char               *arg) { return arg; }
 inline auto cfmt_convert(const unsigned char      *arg) { return arg; }
 inline auto cfmt_convert(const short              *arg) { return arg; }
@@ -117,6 +121,7 @@ inline auto cfmt_convert(const unsigned long long *arg) { return arg; }
 inline auto cfmt_convert(const float              *arg) { return arg; }
 inline auto cfmt_convert(const double             *arg) { return arg; }
 
+inline auto cfmt_to_typeid(const bool                arg) { return kBool; }
 inline auto cfmt_to_typeid(const char                arg) { return kChar; }
 inline auto cfmt_to_typeid(const unsigned char       arg) { return kUChar; }
 inline auto cfmt_to_typeid(const short               arg) { return kShort; }
@@ -130,6 +135,7 @@ inline auto cfmt_to_typeid(const unsigned long long  arg) { return kULLong; }
 inline auto cfmt_to_typeid(const float               arg) { return kFloat; }
 inline auto cfmt_to_typeid(const double              arg) { return kDouble; }
 
+inline auto cfmt_to_typeid(const bool               *arg) { return kBoolP; }
 inline auto cfmt_to_typeid(const char               *arg) { return kCharP; }
 inline auto cfmt_to_typeid(const unsigned char      *arg) { return kUCharP; }
 inline auto cfmt_to_typeid(const short              *arg) { return kShortP; }
@@ -199,6 +205,7 @@ void cfmt_fprint_cpp(FILE* fp, const char* fmt, int line_no, Args&&... args) {
 
 #define TYPE_ID(v)                         \
   _Generic((v),                            \
+      _Bool: kBool,                        \
       char: kChar,                         \
       unsigned char: kUChar,               \
       short: kShort,                       \
@@ -212,6 +219,7 @@ void cfmt_fprint_cpp(FILE* fp, const char* fmt, int line_no, Args&&... args) {
       float: kFloat,                       \
       double: kDouble,                     \
                                            \
+      const _Bool*: kBoolP,                \
       const char*: kCharP,                 \
       const unsigned char*: kUCharP,       \
       const short*: kShortP,               \
@@ -226,6 +234,7 @@ void cfmt_fprint_cpp(FILE* fp, const char* fmt, int line_no, Args&&... args) {
       const double*: kDoubleP,             \
       void*: kVoidP,                       \
                                            \
+      _Bool*: kBoolP,                      \
       char*: kCharP,                       \
       unsigned char*: kUCharP,             \
       short*: kShortP,                     \

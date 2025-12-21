@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <string.h>
 #include <time.h>
+#include <stdbool.h>
 
 #include "cfmt.h"
 const static int v0 = COUNT_ARGS() == 0;
@@ -127,7 +128,11 @@ int main() {
   cfmt_println("{} {} {} {} {}|", (float)10, 11., "12", &v1, &v2);
   cfmt_println("{:#x}|{:-#10o}|{:10.3}|{:+10.0g}|{:.3e}|{}|", 15, 16, -0.0017,
                18e8, 19e7, 20);
-  cfmt_println("{} {}|", 1, 2, 3);
+
+  bool bool_val = true;
+  cfmt_println("bool val: {}, &bool: {}", bool_val, &bool_val);
+  cfmt_println("!bool val is int, so it will be: {}", !bool_val);
+  cfmt_println("true and false are int, so true={}, false={}", true, false);
 
   // test 22 arguments
   cfmt_println("{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}",
@@ -146,6 +151,11 @@ int main() {
   result = cfmt_format("{:.*}", "a", "1000000000");
   assert(cfmt_last_errno() == kWrongType);
   cfmt_println("{}", cfmt_strerr());
+
+  result = cfmt_format("{} {}|", 1, 2, 3);
+  assert(cfmt_last_errno() == kUnmatchedArgCount);
+  cfmt_println("{}", cfmt_strerr());
+  assert(cfmt_last_errno() == kNoError);
 
   result = cfmt_format("{}", "a", "1000000000");
   assert(cfmt_last_errno() == kUnmatchedArgCount);

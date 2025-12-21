@@ -79,6 +79,9 @@ int main() {
   cfmt_println("{} {} {} {} {}|", (float)10, 11., "12", &v1, &v2);
   cfmt_println("{:#x}|{:-#10o}|{:10.3}|{:+10.0g}|{:.3e}|{}|", 15, 16, -0.0017,
                18e8, 19e7, 20);
+  bool bool_val = true;
+  cfmt_println("bool_val={} !bool_val={} true={} false={} &bool_val={}",
+               bool_val, !bool_val, true, false, &bool_val);
   std::string str = "std::string{'std::string'}";
   cfmt_println("{}", str);
   std::string_view sv = "std::string_view{'std::string_view'}";

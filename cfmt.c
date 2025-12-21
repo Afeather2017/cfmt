@@ -55,6 +55,11 @@ static enum cfmt_error_code concat_vsnprintf_one(struct string_buffer* buf,
     case kUnknow:
       return kUnknowType;
       break;
+    case kBool:
+      // bool will be promoted to int in function arguments
+      ret = snprintf(start, size, fmt,
+                     (int)va_arg(list->wrapped, int) ? "true": "false");
+      break;
     case kChar:
     case kUChar:
     case kShort:
@@ -83,6 +88,7 @@ static enum cfmt_error_code concat_vsnprintf_one(struct string_buffer* buf,
     case kUCharP:
       ret = snprintf(start, size, fmt, (char*)va_arg(list->wrapped, char*));
       break;
+    case kBoolP:
     case kShortP:
     case kUShortP:
     case kIntP:
@@ -116,6 +122,7 @@ static char* get_buf_as_c_string(struct string_buffer* buf) {
 static char conversion_specifier(enum cfmt_typeid type_id) {
   // clang-format off
   switch (type_id) {
+    case kBool:    return 's';
     case kChar:    return 'c';
     case kUChar:   return 'c';
     case kShort:   return 'd';
@@ -131,6 +138,7 @@ static char conversion_specifier(enum cfmt_typeid type_id) {
 
     case kCharP:
     case kUCharP:  return 's';
+    case kBoolP:
     case kShortP:
     case kUShortP:
     case kIntP:
@@ -143,6 +151,7 @@ static char conversion_specifier(enum cfmt_typeid type_id) {
     case kDoubleP:
     case kVoidP:   return 'p';
     case kUnknow:  return '?';
+    // If we try to print a structure, them spec shall be 's'.
     default:       return 's';
   }
   // clang-format on
@@ -290,13 +299,13 @@ static const char* cfmt(const char* fmt, int count, enum cfmt_typeid types[],
           fmt_spec_start = fmt + i;
           stat = ':';
         } else if (ch == '}') {
+          needed_arg_count++;
           if (type_id_index >= count) {
             err = kUnmatchedArgCount;
             break;
           }
           enum cfmt_typeid type_id = types[type_id_index++];
           err = format_and_append(&out_buf, &fmt_buf, type_id, list);
-          needed_arg_count++;
           stat = 'c';
         } else {
           err = kWrongFormatSpec;
@@ -319,6 +328,7 @@ static const char* cfmt(const char* fmt, int count, enum cfmt_typeid types[],
       case ':':
         if (ch == '}') {
           fmt_spec_end = fmt + i;
+          needed_arg_count++;
           if (type_id_index >= count) {
             err = kUnmatchedArgCount;
             break;
@@ -329,9 +339,9 @@ static const char* cfmt(const char* fmt, int count, enum cfmt_typeid types[],
           int spec_len = (int)(fmt_spec_end - fmt_spec_start);
           assert(spec_len >= 0);
           err = format_and_append(&out_buf, &fmt_buf, type_id, list);
-          needed_arg_count++;
           stat = 'c';
         } else if (ch == '*') {
+          needed_arg_count++;
           if (type_id_index >= count) {
             err = kUnmatchedArgCount;
             break;
@@ -343,7 +353,6 @@ static const char* cfmt(const char* fmt, int count, enum cfmt_typeid types[],
             err = kWrongType;
             break;
           }
-          needed_arg_count++;
         } else {
           err = put_char_to_buf(&fmt_buf, ch);
           // stat = ':';
@@ -372,18 +381,18 @@ static const char* cfmt(const char* fmt, int count, enum cfmt_typeid types[],
       break;
     case kBufferOverflow:
       snprintf(cfmt_errstr, sizeof(cfmt_errstr),
-               "%d:Format result too long, limited to %d: fmt='%s'", line_no,
+               "%d: Format result too long, limited to %d: fmt='%s'", line_no,
                CFMT_OUTPUT_SIZE, fmt);
       break;
     case kWrongType:
       snprintf(
           cfmt_errstr, sizeof(cfmt_errstr),
-          "%d:Incorrect type at args[%d], this has to be int-like, fmt='%s'",
+          "%d: Incorrect type at args[%d], this has to be int-like, fmt='%s'",
           line_no, needed_arg_count, fmt);
       break;
     case kWrongFormatSpec:
       snprintf(cfmt_errstr, sizeof(cfmt_errstr),
-               "%d:Incorrect format-spec near fmt[%d], fmt='%s'", line_no, i,
+               "%d: Incorrect format-spec near fmt[%d], fmt='%s'", line_no, i,
                fmt);
       break;
     case kUnknowType:
@@ -398,7 +407,7 @@ static const char* cfmt(const char* fmt, int count, enum cfmt_typeid types[],
       break;
     case kUnmatchedArgCount:
       snprintf(cfmt_errstr, sizeof(cfmt_errstr),
-               "%d:We need %d argument(s), but %d argument(s) given, fmt='%s'",
+               "%d: We need %d argument(s), but %d argument(s) given, fmt='%s'",
                line_no, needed_arg_count, count, fmt);
       break;
   }
