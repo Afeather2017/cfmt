@@ -6,7 +6,9 @@ extern "C" {
 #endif  // __cplusplus
 #include <stdarg.h>
 #include <stdio.h>
+#ifndef CFMT_OUTPUT_SIZE
 #define CFMT_OUTPUT_SIZE 60000
+#endif
 struct string_buffer {
   int size;
   int capacity;

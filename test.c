@@ -97,6 +97,36 @@ int main() {
   sprintf(buf, "%*.*lf", 10, 10, 0.0000000005);
   assert(0 == strcmp(result, buf));
 
+  // * accepts any integer type
+  cfmt_format("{:*}", (long)10, 42);
+  assert(cfmt_last_errno() == kNoError);
+  cfmt_format("{:*}", (long long)10, 42);
+  assert(cfmt_last_errno() == kNoError);
+  cfmt_format("{:*}", (unsigned)10, 42);
+  assert(cfmt_last_errno() == kNoError);
+  cfmt_format("{:*}", (unsigned long long)10, 42);
+  assert(cfmt_last_errno() == kNoError);
+  cfmt_format("{:*}", (short)10, 42);
+  assert(cfmt_last_errno() == kNoError);
+
+  // * rejects non-integer types
+  cfmt_format("{:*}", (char)'a', 42);
+  assert(cfmt_last_errno() == kWrongType);
+  cfmt_println("{}", cfmt_strerr());
+  bool bool_for_star = true;
+  cfmt_format("{:*}", bool_for_star, 42);
+  assert(cfmt_last_errno() == kWrongType);
+  cfmt_println("{}", cfmt_strerr());
+  cfmt_format("{:*}", 1.0f, 42);
+  assert(cfmt_last_errno() == kWrongType);
+  cfmt_println("{}", cfmt_strerr());
+  cfmt_format("{:*}", &v0, 42);
+  assert(cfmt_last_errno() == kWrongType);
+  cfmt_println("{}", cfmt_strerr());
+  cfmt_format("{:*}", "12", 42);
+  assert(cfmt_last_errno() == kWrongType);
+  cfmt_println("{}", cfmt_strerr());
+
   sprintf(buf, "%p|%p|%p|%p|%p", &v0, &v1, &v2, &v3, &v4);
   result = cfmt_format("{}|{}|{}|{}|{}", &v0, &v1, &v2, &v3, &v4);
   assert(0 == strcmp(buf, result));

@@ -4,7 +4,6 @@
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdbool.h>
-#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 static void string_buffer_init(struct string_buffer* buf, char* data, int len) {
@@ -107,10 +106,16 @@ static enum cfmt_error_code concat_vsnprintf_one(struct string_buffer* buf,
                      va_arg(list->wrapped, struct tm*));
       break;
     default:
-      if (default_formatter == NULL) abort();
+      if (default_formatter == NULL) {
+        assert(0 && "cfmt: no formatter registered for this type");
+        return kUnknowType;
+      }
       return default_formatter(buf, type_id, fmt, list);
   }
-  if (ret < 0) abort();
+  if (ret < 0) {
+    assert(0 && "cfmt: snprintf encoding error");
+    return kWrongFormatSpec;
+  }
   if (ret >= size) return kBufferOverflow;
   buf->size += ret;
   return kNoError;
@@ -223,9 +228,10 @@ static enum cfmt_error_code append_spec(struct string_buffer* buf,
   }
   // clang-format on
   enum cfmt_error_code err = kNoError;
-  // If buffer overflow, then they must return kBufferOverflow.
   err = append_data_to_buf(buf, spec, spec_len);
+  if (err != kNoError) return err;
   err = concat_to_buf(buf, length_modifier(type_id));
+  if (err != kNoError) return err;
   err = put_char_to_buf(buf, conv);
   return err;
 }
@@ -256,10 +262,18 @@ static enum cfmt_error_code format_and_append(struct string_buffer* buf,
   if (err != kNoError) return err;
   return concat_vsnprintf_one(buf, type_id, raw_spec_buf, list);
 }
-static bool is_integer_str(const char* str) {
-  for (int i = 0; str[i] != '\0'; i++)
-    if (!('0' <= str[i] && str[i] <= '9')) return false;
-  return true;
+static bool is_integer_type(enum cfmt_typeid type_id) {
+  // clang-format off
+  switch (type_id) {
+    case kShort: case kUShort:
+    case kInt:   case kUInt:
+    case kLong:  case kULong:
+    case kLLong: case kULLong:
+      return true;
+    default:
+      return false;
+  }
+  // clang-format on
 }
 static const char* cfmt(const char* fmt, int count, enum cfmt_typeid types[],
                         struct cfmt_valist* list) {
@@ -347,12 +361,12 @@ static const char* cfmt(const char* fmt, int count, enum cfmt_typeid types[],
             break;
           }
           enum cfmt_typeid type_id = types[type_id_index++];
-          int before = fmt_buf.size;
-          err = format_and_append(&fmt_buf, NULL, type_id, list);
-          if (err == kNoError && !is_integer_str(fmt_buf.data + before)) {
+          if (!is_integer_type(type_id)) {
             err = kWrongType;
             break;
           }
+          err = format_and_append(&fmt_buf, NULL, type_id, list);
+          if (err != kNoError) break;
         } else {
           err = put_char_to_buf(&fmt_buf, ch);
           // stat = ':';
